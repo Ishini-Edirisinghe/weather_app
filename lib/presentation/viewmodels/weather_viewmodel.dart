@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../data/datasources/remote_datasource.dart';
-import '../../data/datasources/local_datasource.dart';
 import '../../data/repositories/weather_repository_impl.dart';
 import '../../domain/entities/weather_entity.dart';
-import 'package:dio/dio.dart';
 
 class WeatherViewModel extends ChangeNotifier {
   final WeatherRepositoryImpl repository;

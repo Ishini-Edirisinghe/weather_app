@@ -21,20 +21,28 @@ class RemoteDatasource {
     return WeatherModel.fromCurrentJson(resp.data);
   }
 
+  // --- CHANGED METHOD ---
+  // We keep the name 'fetchOneCall' so weather_repository_impl.dart stays happy.
+  // BUT internally, we use the FREE '/forecast' logic.
   Future<ForecastModel> fetchOneCall(double lat, double lon) async {
-    final url = '${AppConstants.openWeatherBase}/onecall';
+    // 1. Use the FREE endpoint
+    final url = '${AppConstants.openWeatherBase}/forecast';
+
     final resp = await dio.get(
       url,
       queryParameters: {
         'lat': lat,
         'lon': lon,
-        'exclude': 'minutely',
         'appid': kOpenWeatherApiKey,
         'units': 'metric',
+        // 'exclude' is removed because the free API doesn't support it
       },
     );
-    return ForecastModel.fromOneCall(resp.data);
+
+    // 2. Use the new adapter we created in the model
+    return ForecastModel.fromForecastJson(resp.data);
   }
+  // ---------------------
 
   Future<Map<String, dynamic>> geocodeCity(String city) async {
     final url = '${AppConstants.geocodingBase}/direct';
