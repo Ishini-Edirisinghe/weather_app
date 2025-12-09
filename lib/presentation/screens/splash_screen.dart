@@ -46,7 +46,7 @@ class _SplashScreenState extends State<SplashScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF42A5F5), // Light Blue
+              Color.fromARGB(255, 0, 10, 17), // Light Blue
               Color(0xFF7E57C2), // Purple
             ],
           ),
