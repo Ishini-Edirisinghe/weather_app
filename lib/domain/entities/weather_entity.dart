@@ -2,6 +2,7 @@ class WeatherEntity {
   final String city;
   final double lat;
   final double lon;
+  final String country;
   final double temp;
   final String description;
   final String iconCode;
@@ -18,6 +19,7 @@ class WeatherEntity {
     required this.city,
     required this.lat,
     required this.lon,
+    required this.country,
     required this.temp,
     required this.description,
     required this.iconCode,
