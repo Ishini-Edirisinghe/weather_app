@@ -12,6 +12,7 @@ class WeatherEntity {
   final double windSpeed;
   final int sunrise; // Unix timestamp
   final int sunset; // Unix timestamp
+  final bool isFavorite;
 
   WeatherEntity({
     required this.city,
@@ -26,5 +27,6 @@ class WeatherEntity {
     required this.windSpeed,
     required this.sunrise,
     required this.sunset,
+    this.isFavorite = false,
   });
 }
