@@ -1,3 +1,5 @@
+import 'package:weather_app/domain/entities/weather_alert.dart';
+
 class WeatherEntity {
   final String city;
   final double lat;
@@ -13,6 +15,7 @@ class WeatherEntity {
   final int sunrise;
   final int sunset;
   final bool isFavorite;
+  final List<WeatherAlert> alerts;
 
   WeatherEntity({
     required this.city,
@@ -29,5 +32,6 @@ class WeatherEntity {
     required this.sunrise,
     required this.sunset,
     this.isFavorite = false,
+    this.alerts = const [], // Default empty
   });
 }

@@ -1,4 +1,5 @@
 import '../../domain/entities/weather_entity.dart';
+import '../../domain/entities/weather_alert.dart';
 import '../datasources/remote_datasource.dart';
 import '../datasources/local_datasource.dart';
 import 'dart:convert';
@@ -16,11 +17,38 @@ class WeatherRepositoryImpl {
 
       final lat = (geo['lat'] as num).toDouble();
       final lon = (geo['lon'] as num).toDouble();
-      // Fetch Country and State (Region)
       final country = geo['country'] as String? ?? '';
       final state = geo['state'] as String? ?? '';
 
       final forecast = await remote.fetchOneCall(lat, lon);
+
+      // --- 1. GENERATE ALERTS (Synthetic) ---
+      final List<Map<String, dynamic>> generatedAlerts = [];
+
+      if (weatherModel.windSpeed > 10.0) {
+        generatedAlerts.add({
+          'sender_name': 'WeatherNow System',
+          'event': 'High Wind Warning',
+          'description':
+              'Wind speeds are exceeding 10 m/s. Secure loose objects.',
+          'start': DateTime.now().millisecondsSinceEpoch,
+          'end': DateTime.now()
+              .add(const Duration(hours: 6))
+              .millisecondsSinceEpoch,
+        });
+      }
+
+      if (weatherModel.description.toLowerCase().contains('rain')) {
+        generatedAlerts.add({
+          'sender_name': 'WeatherNow System',
+          'event': 'Rain Alert',
+          'description': 'Rain detected in $city. Drive carefully.',
+          'start': DateTime.now().millisecondsSinceEpoch,
+          'end': DateTime.now()
+              .add(const Duration(hours: 4))
+              .millisecondsSinceEpoch,
+        });
+      }
 
       final payload = jsonEncode({
         'current': {
@@ -35,13 +63,26 @@ class WeatherRepositoryImpl {
           'sunset': weatherModel.sunset,
         },
         'forecast': {'hourly': forecast.hourly, 'daily': forecast.daily},
+        'alerts': generatedAlerts,
       });
 
-      // Save to Cache with Country/State
       await local.cacheCity(city, lat, lon, country, state, payload);
 
       final cached = await local.getCachedCity(city);
       final isFav = (cached?['is_favorite'] as int? ?? 0) == 1;
+
+      final alertEntities = generatedAlerts
+          .map(
+            (a) => WeatherAlert(
+              city: city,
+              sender: a['sender_name'],
+              event: a['event'],
+              description: a['description'],
+              start: DateTime.fromMillisecondsSinceEpoch(a['start']),
+              end: DateTime.fromMillisecondsSinceEpoch(a['end']),
+            ),
+          )
+          .toList();
 
       return WeatherEntity(
         city: city,
@@ -58,6 +99,7 @@ class WeatherRepositoryImpl {
         sunrise: weatherModel.sunrise,
         sunset: weatherModel.sunset,
         isFavorite: isFav,
+        alerts: alertEntities,
       );
     } catch (e) {
       // Fallback
@@ -67,6 +109,20 @@ class WeatherRepositoryImpl {
             jsonDecode(cached['json'] as String) as Map<String, dynamic>;
         final current = data['current'];
         final isFav = (cached['is_favorite'] as int? ?? 0) == 1;
+
+        final rawAlerts = (data['alerts'] as List?) ?? [];
+        final alertEntities = rawAlerts
+            .map(
+              (a) => WeatherAlert(
+                city: city,
+                sender: a['sender_name'] ?? 'System',
+                event: a['event'] ?? 'Alert',
+                description: a['description'] ?? '',
+                start: DateTime.fromMillisecondsSinceEpoch(a['start'] ?? 0),
+                end: DateTime.fromMillisecondsSinceEpoch(a['end'] ?? 0),
+              ),
+            )
+            .toList();
 
         return WeatherEntity(
           city: city,
@@ -83,12 +139,14 @@ class WeatherRepositoryImpl {
           sunrise: current['sunrise'] as int? ?? 0,
           sunset: current['sunset'] as int? ?? 0,
           isFavorite: isFav,
+          alerts: alertEntities,
         );
       }
       rethrow;
     }
   }
 
+  // --- THIS WAS MISSING ---
   Future<void> toggleFavorite(String city, bool isFavorite) async {
     await local.setFavorite(city, isFavorite);
   }
@@ -98,9 +156,24 @@ class WeatherRepositoryImpl {
     return rows.map((row) {
       final data = jsonDecode(row['json'] as String) as Map<String, dynamic>;
       final current = data['current'];
+      final city = row['city'] as String;
+
+      final rawAlerts = (data['alerts'] as List?) ?? [];
+      final alertEntities = rawAlerts
+          .map(
+            (a) => WeatherAlert(
+              city: city,
+              sender: a['sender_name'] ?? 'System',
+              event: a['event'] ?? 'Alert',
+              description: a['description'] ?? '',
+              start: DateTime.fromMillisecondsSinceEpoch(a['start'] ?? 0),
+              end: DateTime.fromMillisecondsSinceEpoch(a['end'] ?? 0),
+            ),
+          )
+          .toList();
 
       return WeatherEntity(
-        city: row['city'] as String,
+        city: city,
         lat: (row['lat'] as num).toDouble(),
         lon: (row['lon'] as num).toDouble(),
         country: row['country'] as String? ?? '',
@@ -114,126 +187,8 @@ class WeatherRepositoryImpl {
         sunrise: current['sunrise'] as int? ?? 0,
         sunset: current['sunset'] as int? ?? 0,
         isFavorite: true,
+        alerts: alertEntities,
       );
     }).toList();
   }
 }
-
-// import '../../domain/entities/weather_entity.dart';
-// import '../datasources/remote_datasource.dart';
-// import '../datasources/local_datasource.dart';
-// import 'dart:convert';
-
-// class WeatherRepositoryImpl {
-//   final RemoteDatasource remote;
-//   final LocalDatasource local;
-
-//   WeatherRepositoryImpl({required this.remote, required this.local});
-
-//   Future<WeatherEntity> getCurrentWeatherByCity(String city) async {
-//     try {
-//       final weatherModel = await remote.fetchCurrentByCity(city);
-//       final geo = await remote.geocodeCity(city);
-//       final lat = (geo['lat'] as num).toDouble();
-//       final lon = (geo['lon'] as num).toDouble();
-
-//       // Get country code (e.g. US, GB, LK) from geocoding response
-//       final country = geo['country'] as String? ?? 'Unknown';
-
-//       final forecast = await remote.fetchOneCall(lat, lon);
-
-//       final payload = jsonEncode({
-//         'current': {
-//           'dt': weatherModel.dt,
-//           'temp': weatherModel.temp,
-//           'feels_like': weatherModel.feelsLike,
-//           'humidity': weatherModel.humidity,
-//           'wind_speed': weatherModel.windSpeed,
-//           'description': weatherModel.description,
-//           'icon': weatherModel.icon,
-//           'sunrise': weatherModel.sunrise,
-//           'sunset': weatherModel.sunset,
-//         },
-//         'forecast': {'hourly': forecast.hourly, 'daily': forecast.daily},
-//       });
-
-//       // Pass 'country' to cache
-//       await local.cacheCity(city, lat, lon, country, payload);
-
-//       final cached = await local.getCachedCity(city);
-//       final isFav = (cached?['is_favorite'] as int? ?? 0) == 1;
-
-//       return WeatherEntity(
-//         city: city,
-//         lat: lat,
-//         lon: lon,
-//         country: country, // Set country
-//         temp: weatherModel.temp,
-//         description: weatherModel.description,
-//         iconCode: weatherModel.icon,
-//         forecastJson: payload,
-//         humidity: weatherModel.humidity,
-//         windSpeed: weatherModel.windSpeed,
-//         sunrise: weatherModel.sunrise,
-//         sunset: weatherModel.sunset,
-//         isFavorite: isFav,
-//       );
-//     } catch (e) {
-//       final cached = await local.getCachedCity(city);
-//       if (cached != null) {
-//         final data =
-//             jsonDecode(cached['json'] as String) as Map<String, dynamic>;
-//         final current = data['current'];
-//         final isFav = (cached['is_favorite'] as int? ?? 0) == 1;
-
-//         // Get country from cache
-//         final country = cached['country'] as String? ?? 'Unknown';
-
-//         return WeatherEntity(
-//           city: city,
-//           lat: (cached['lat'] as num).toDouble(),
-//           lon: (cached['lon'] as num).toDouble(),
-//           country: country,
-//           temp: (current['temp'] as num).toDouble(),
-//           description: current['description'] as String,
-//           iconCode: current['icon'] as String,
-//           forecastJson: cached['json'] as String,
-//           humidity: current['humidity'] as int? ?? 0,
-//           windSpeed: (current['wind_speed'] as num?)?.toDouble() ?? 0.0,
-//           sunrise: current['sunrise'] as int? ?? 0,
-//           sunset: current['sunset'] as int? ?? 0,
-//           isFavorite: isFav,
-//         );
-//       }
-//       rethrow;
-//     }
-//   }
-
-//   Future<void> toggleFavorite(String city, bool isFavorite) async {
-//     await local.setFavorite(city, isFavorite);
-//   }
-
-//   Future<List<WeatherEntity>> getFavorites() async {
-//     final rows = await local.getFavorites();
-//     return rows.map((row) {
-//       final data = jsonDecode(row['json'] as String) as Map<String, dynamic>;
-//       final current = data['current'];
-
-//       return WeatherEntity(
-//         city: row['city'] as String,
-//         lat: (row['lat'] as num).toDouble(),
-//         lon: (row['lon'] as num).toDouble(),
-//         country: row['country'] as String? ?? 'Unknown', // Get from DB
-//         temp: (current['temp'] as num).toDouble(),
-//         description: current['description'] as String,
-//         iconCode: current['icon'] as String,
-//         forecastJson: row['json'] as String,
-//         humidity: current['humidity'] as int? ?? 0,
-//         windSpeed: (current['wind_speed'] as num?)?.toDouble() ?? 0.0,
-//         sunrise: current['sunrise'] as int? ?? 0,
-//         sunset: current['sunset'] as int? ?? 0,
-//         isFavorite: true,
-//       );
-//     }).toList();
-//   }
-// }
