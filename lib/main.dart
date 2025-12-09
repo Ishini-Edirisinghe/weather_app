@@ -30,6 +30,7 @@ class MyApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
+        debugShowCheckedModeBanner: false,
         title: 'WeatherNow',
         theme: ThemeData(primarySwatch: Colors.blue),
         home: const SplashScreen(),
