@@ -10,15 +10,6 @@ class FavoritesScreen extends StatefulWidget {
 }
 
 class _FavoritesScreenState extends State<FavoritesScreen> {
-  // Define available filters
-  final List<String> filters = [
-    'All',
-    'Asia',
-    'Europe',
-    'North America',
-    'Other',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -36,43 +27,56 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       appBar: AppBar(title: const Text('Favorites')),
       body: Column(
         children: [
-          // Filter Chips Row
-          SizedBox(
-            height: 60,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              scrollDirection: Axis.horizontal,
-              itemCount: filters.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final filter = filters[index];
-                final isSelected = vm.selectedFilter == filter;
-                return Center(
-                  child: ChoiceChip(
-                    label: Text(filter),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      if (selected) {
-                        vm.applyFilter(filter);
+          // --- Dropdown Filter ---
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: Colors.grey[100],
+            child: Row(
+              children: [
+                const Text(
+                  "Filter by Region: ",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: DropdownButton<String>(
+                    isExpanded: true,
+                    value: vm.selectedFilter,
+                    icon: const Icon(Icons.filter_list),
+                    underline: Container(height: 2, color: Colors.blue),
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
+                        vm.applyFilter(newValue);
                       }
                     },
+                    items: vm.availableRegions.map<DropdownMenuItem<String>>((
+                      String value,
+                    ) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    }).toList(),
                   ),
-                );
-              },
+                ),
+              ],
             ),
           ),
 
-          // Favorites List
+          // --- Favorites List ---
           Expanded(
             child: vm.filteredFavorites.isEmpty
-                ? const Center(
-                    child: Text('No favorites found for this region'),
-                  )
+                ? const Center(child: Text('No favorites found.'))
                 : ListView.builder(
                     padding: const EdgeInsets.all(12),
                     itemCount: vm.filteredFavorites.length,
                     itemBuilder: (context, index) {
                       final city = vm.filteredFavorites[index];
+                      // Subtitle shows region if Sri Lanka, or Country Name if Other
+                      final locationSubtitle = city.country == 'LK'
+                          ? city.state
+                          : "International (${city.country})";
+
                       return Card(
                         margin: const EdgeInsets.only(bottom: 12),
                         child: ListTile(
@@ -86,7 +90,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           subtitle: Text(
-                            "${city.description} • ${city.country}",
+                            "$locationSubtitle • ${city.description}",
                           ),
                           trailing: Text(
                             '${city.temp.toStringAsFixed(1)}°C',
@@ -106,6 +110,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     );
   }
 }
+
 // import 'package:flutter/material.dart';
 // import 'package:provider/provider.dart';
 // import '../viewmodels/weather_viewmodel.dart';
@@ -118,6 +123,15 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 // }
 
 // class _FavoritesScreenState extends State<FavoritesScreen> {
+//   // Define available filters
+//   final List<String> filters = [
+//     'All',
+//     'Asia',
+//     'Europe',
+//     'North America',
+//     'Other',
+//   ];
+
 //   @override
 //   void initState() {
 //     super.initState();
@@ -131,43 +145,77 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 //   Widget build(BuildContext context) {
 //     final vm = Provider.of<WeatherViewModel>(context);
 
-//     // No need to look for a special function provider anymore!
-
 //     return Scaffold(
 //       appBar: AppBar(title: const Text('Favorites')),
-//       body: vm.favorites.isEmpty
-//           ? const Center(child: Text('No favorites yet'))
-//           : ListView.builder(
-//               padding: const EdgeInsets.all(12),
-//               itemCount: vm.favorites.length,
+//       body: Column(
+//         children: [
+//           // Filter Chips Row
+//           SizedBox(
+//             height: 60,
+//             child: ListView.separated(
+//               padding: const EdgeInsets.symmetric(horizontal: 16),
+//               scrollDirection: Axis.horizontal,
+//               itemCount: filters.length,
+//               separatorBuilder: (_, __) => const SizedBox(width: 8),
 //               itemBuilder: (context, index) {
-//                 final city = vm.favorites[index];
-//                 return Card(
-//                   margin: const EdgeInsets.only(bottom: 12),
-//                   child: ListTile(
-//                     leading: Image.network(
-//                       'https://openweathermap.org/img/wn/${city.iconCode}.png',
-//                       errorBuilder: (_, __, ___) => const Icon(Icons.cloud),
-//                     ),
-//                     title: Text(
-//                       city.city,
-//                       style: const TextStyle(fontWeight: FontWeight.bold),
-//                     ),
-//                     subtitle: Text(city.description),
-//                     trailing: Text(
-//                       '${city.temp.toStringAsFixed(1)}°C',
-//                       style: const TextStyle(fontSize: 18),
-//                     ),
-//                     onTap: () async {
-//                       await vm.loadWeatherForCity(city.city);
-
-//                       // FIX: Just use the ViewModel to switch the tab!
-//                       vm.setTabIndex(0);
+//                 final filter = filters[index];
+//                 final isSelected = vm.selectedFilter == filter;
+//                 return Center(
+//                   child: ChoiceChip(
+//                     label: Text(filter),
+//                     selected: isSelected,
+//                     onSelected: (selected) {
+//                       if (selected) {
+//                         vm.applyFilter(filter);
+//                       }
 //                     },
 //                   ),
 //                 );
 //               },
 //             ),
+//           ),
+
+//           // Favorites List
+//           Expanded(
+//             child: vm.filteredFavorites.isEmpty
+//                 ? const Center(
+//                     child: Text('No favorites found for this region'),
+//                   )
+//                 : ListView.builder(
+//                     padding: const EdgeInsets.all(12),
+//                     itemCount: vm.filteredFavorites.length,
+//                     itemBuilder: (context, index) {
+//                       final city = vm.filteredFavorites[index];
+//                       return Card(
+//                         margin: const EdgeInsets.only(bottom: 12),
+//                         child: ListTile(
+//                           leading: Image.network(
+//                             'https://openweathermap.org/img/wn/${city.iconCode}.png',
+//                             errorBuilder: (_, __, ___) =>
+//                                 const Icon(Icons.cloud),
+//                           ),
+//                           title: Text(
+//                             city.city,
+//                             style: const TextStyle(fontWeight: FontWeight.bold),
+//                           ),
+//                           subtitle: Text(
+//                             "${city.description} • ${city.country}",
+//                           ),
+//                           trailing: Text(
+//                             '${city.temp.toStringAsFixed(1)}°C',
+//                             style: const TextStyle(fontSize: 18),
+//                           ),
+//                           onTap: () async {
+//                             await vm.loadWeatherForCity(city.city);
+//                             vm.setTabIndex(0);
+//                           },
+//                         ),
+//                       );
+//                     },
+//                   ),
+//           ),
+//         ],
+//       ),
 //     );
 //   }
 // }
