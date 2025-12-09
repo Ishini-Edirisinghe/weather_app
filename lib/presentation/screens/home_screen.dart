@@ -181,7 +181,7 @@ class _WeatherTab extends StatelessWidget {
                                   elevation: 0,
                                 ),
                                 child: const Text(
-                                  'View 7-Day Forecast',
+                                  'View 5-Day Forecast',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
