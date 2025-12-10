@@ -6,7 +6,6 @@ class WeatherModel {
   final double windSpeed;
   final String description;
   final String icon;
-  // --- NEW FIELDS ---
   final int sunrise;
   final int sunset;
 
@@ -28,11 +27,10 @@ class WeatherModel {
       dt: json['dt'],
       temp: (json['main']['temp'] as num).toDouble(),
       feelsLike: (json['main']['feels_like'] as num).toDouble(),
-      humidity: json['main']['humidity'], // Already existed
-      windSpeed: (json['wind']['speed'] as num).toDouble(), // Already existed
+      humidity: json['main']['humidity'],
+      windSpeed: (json['wind']['speed'] as num).toDouble(),
       description: weather['description'],
       icon: weather['icon'],
-      // --- Parse Sunrise/Sunset from 'sys' object ---
       sunrise: json['sys']['sunrise'] ?? 0,
       sunset: json['sys']['sunset'] ?? 0,
     );
