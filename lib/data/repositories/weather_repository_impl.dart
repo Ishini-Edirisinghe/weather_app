@@ -43,7 +43,6 @@ class WeatherRepositoryImpl {
 
       final forecast = await remote.fetchOneCall(lat, lon);
 
-      // 2. Generate Synthetic Alerts (since free API lacks them)
       final List<Map<String, dynamic>> generatedAlerts = [];
 
       if (weatherModel.windSpeed > 10.0) {

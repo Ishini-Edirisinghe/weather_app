@@ -91,7 +91,6 @@ class LocalDatasource {
     await db.delete(_historyTable);
   }
 
-  // --- NEW: Delete Single Item ---
   Future<void> deleteSearchItem(String query) async {
     final db = await _openDb();
     await db.delete(_historyTable, where: 'query = ?', whereArgs: [query]);
