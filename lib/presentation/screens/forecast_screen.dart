@@ -89,7 +89,7 @@ class ForecastScreen extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF00182C), Color(0xFF7E57C2)],
+            colors: [Color(0xFF42A5F5), Color(0xFF7E57C2)],
           ),
         ),
         child: SafeArea(
@@ -368,7 +368,7 @@ class ForecastScreen extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF00182C), Color(0xFF7E57C2)],
+            colors: [Color(0xFF7E57C2), Color(0xFF7E57C2)],
           ),
         ),
         child: const Center(
@@ -442,7 +442,7 @@ class ForecastScreen extends StatelessWidget {
 //             gradient: LinearGradient(
 //               begin: Alignment.topCenter,
 //               end: Alignment.bottomCenter,
-//               colors: [Color(0xFF00182C), Color(0xFF7E57C2)],
+//               colors: [Color(0xFF7E57C2), Color(0xFF7E57C2)],
 //             ),
 //           ),
 //           child: const Center(
@@ -497,7 +497,7 @@ class ForecastScreen extends StatelessWidget {
 //           gradient: LinearGradient(
 //             begin: Alignment.topCenter,
 //             end: Alignment.bottomCenter,
-//             colors: [Color(0xFF00182C), Color(0xFF7E57C2)],
+//             colors: [Color(0xFF7E57C2), Color(0xFF7E57C2)],
 //           ),
 //         ),
 //         child: SafeArea(

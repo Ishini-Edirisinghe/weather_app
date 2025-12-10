@@ -42,7 +42,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF00182C), // Light Blue
+              Color(0xFF42A5F5), // Light Blue
               Color(0xFF7E57C2), // Purple
             ],
           ),
