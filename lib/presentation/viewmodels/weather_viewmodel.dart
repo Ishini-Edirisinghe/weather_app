@@ -39,6 +39,18 @@ class WeatherViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // NEW: Clear All History
+  Future<void> clearSearchHistory() async {
+    await repository.clearSearchHistory();
+    await loadSearchHistory();
+  }
+
+  // NEW: Delete Single Item
+  Future<void> deleteSearchItem(String query) async {
+    await repository.deleteSearchItem(query);
+    await loadSearchHistory();
+  }
+
   // --- MAIN LOAD FUNCTION ---
   Future<void> loadWeatherForCity(String city) async {
     loading = true;
@@ -94,8 +106,7 @@ class WeatherViewModel extends ChangeNotifier {
       // 3. Apply Filter
       applyFilter(selectedFilter);
 
-      // 4. SYNC CURRENT CITY STATUS (The Fix)
-      // This checks if the city on the Home Screen is still in the favorites list
+      // 4. SYNC CURRENT CITY STATUS
       _syncCurrentStatus();
     } catch (e) {
       print("Error loading favorites: $e");
@@ -106,12 +117,10 @@ class WeatherViewModel extends ChangeNotifier {
   void _syncCurrentStatus() {
     if (current == null) return;
 
-    // Check if the current city exists in the updated favorites list
     final isActuallyFavorite = _allFavorites.any(
       (item) => item.city == current!.city,
     );
 
-    // If the status has changed (e.g., removed from favorites screen), update 'current'
     if (current!.isFavorite != isActuallyFavorite) {
       current = WeatherEntity(
         city: current!.city,
@@ -127,7 +136,7 @@ class WeatherViewModel extends ChangeNotifier {
         windSpeed: current!.windSpeed,
         sunrise: current!.sunrise,
         sunset: current!.sunset,
-        isFavorite: isActuallyFavorite, // <--- UPDATE STATUS HERE
+        isFavorite: isActuallyFavorite,
         alerts: current!.alerts,
       );
       notifyListeners();
@@ -159,7 +168,6 @@ class WeatherViewModel extends ChangeNotifier {
     final newStatus = !current!.isFavorite;
     await repository.toggleFavorite(current!.city, newStatus);
 
-    // Update local current state instantly
     current = WeatherEntity(
       city: current!.city,
       lat: current!.lat,
@@ -183,14 +191,9 @@ class WeatherViewModel extends ChangeNotifier {
 
   // Used by Swipe-to-Delete in Favorites Screen
   Future<void> removeFavorite(WeatherEntity city) async {
-    // 1. Remove from local list instantly to prevent UI crash
     _allFavorites.removeWhere((item) => item.city == city.city);
     applyFilter(selectedFilter);
-
-    // 2. Sync with DB in background
     await repository.toggleFavorite(city.city, false);
-
-    // 3. Reload to ensure everything is in sync (including Home screen heart)
     await loadFavorites();
   }
 
@@ -225,6 +228,7 @@ class WeatherViewModel extends ChangeNotifier {
     notifyListeners();
   }
 }
+
 // import 'package:flutter/material.dart';
 // import '../../data/repositories/weather_repository_impl.dart';
 // import '../../domain/entities/weather_entity.dart';
@@ -294,10 +298,11 @@ class WeatherViewModel extends ChangeNotifier {
 //       final Set<String> regions = {'All'};
 //       for (var city in _allFavorites) {
 //         if (city.country == 'LK') {
-//           if (city.state.isNotEmpty)
+//           if (city.state.isNotEmpty) {
 //             regions.add(city.state);
-//           else
+//           } else {
 //             regions.add('Sri Lanka (Unknown Region)');
+//           }
 //         } else {
 //           regions.add('Other');
 //         }
@@ -319,8 +324,44 @@ class WeatherViewModel extends ChangeNotifier {
 
 //       // 3. Apply Filter
 //       applyFilter(selectedFilter);
+
+//       // 4. SYNC CURRENT CITY STATUS (The Fix)
+//       // This checks if the city on the Home Screen is still in the favorites list
+//       _syncCurrentStatus();
 //     } catch (e) {
 //       print("Error loading favorites: $e");
+//     }
+//   }
+
+//   // --- Helper to Sync Home Screen Heart Icon ---
+//   void _syncCurrentStatus() {
+//     if (current == null) return;
+
+//     // Check if the current city exists in the updated favorites list
+//     final isActuallyFavorite = _allFavorites.any(
+//       (item) => item.city == current!.city,
+//     );
+
+//     // If the status has changed (e.g., removed from favorites screen), update 'current'
+//     if (current!.isFavorite != isActuallyFavorite) {
+//       current = WeatherEntity(
+//         city: current!.city,
+//         lat: current!.lat,
+//         lon: current!.lon,
+//         country: current!.country,
+//         state: current!.state,
+//         temp: current!.temp,
+//         description: current!.description,
+//         iconCode: current!.iconCode,
+//         forecastJson: current!.forecastJson,
+//         humidity: current!.humidity,
+//         windSpeed: current!.windSpeed,
+//         sunrise: current!.sunrise,
+//         sunset: current!.sunset,
+//         isFavorite: isActuallyFavorite, // <--- UPDATE STATUS HERE
+//         alerts: current!.alerts,
+//       );
+//       notifyListeners();
 //     }
 //   }
 
@@ -371,16 +412,17 @@ class WeatherViewModel extends ChangeNotifier {
 //     notifyListeners();
 //   }
 
-//   // Add this to WeatherViewModel
-//   void removeFavorite(WeatherEntity city) {
+//   // Used by Swipe-to-Delete in Favorites Screen
+//   Future<void> removeFavorite(WeatherEntity city) async {
 //     // 1. Remove from local list instantly to prevent UI crash
 //     _allFavorites.removeWhere((item) => item.city == city.city);
 //     applyFilter(selectedFilter);
 
 //     // 2. Sync with DB in background
-//     repository.toggleFavorite(city.city, false).catchError((e) {
-//       print("Error removing favorite: $e");
-//     });
+//     await repository.toggleFavorite(city.city, false);
+
+//     // 3. Reload to ensure everything is in sync (including Home screen heart)
+//     await loadFavorites();
 //   }
 
 //   Future<void> removeAlert(WeatherAlert alert) async {

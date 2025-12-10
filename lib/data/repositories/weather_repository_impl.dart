@@ -19,6 +19,16 @@ class WeatherRepositoryImpl {
     return local.getSearchHistory();
   }
 
+  // NEW: Clear All
+  Future<void> clearSearchHistory() async {
+    await local.clearSearchHistory();
+  }
+
+  // NEW: Delete Item
+  Future<void> deleteSearchItem(String query) async {
+    await local.deleteSearchItem(query);
+  }
+
   // --- WEATHER DATA METHODS ---
   Future<WeatherEntity> getCurrentWeatherByCity(String city) async {
     try {
@@ -35,6 +45,17 @@ class WeatherRepositoryImpl {
 
       // 2. Generate Synthetic Alerts (since free API lacks them)
       final List<Map<String, dynamic>> generatedAlerts = [];
+
+      // TEST ALERT (Delete this block when done testing)
+      generatedAlerts.add({
+        'sender_name': 'Test System',
+        'event': 'TEST ALERT: Heat Wave',
+        'description': 'This is a test alert to verify the UI. Please ignore.',
+        'start': DateTime.now().millisecondsSinceEpoch,
+        'end': DateTime.now()
+            .add(const Duration(hours: 48))
+            .millisecondsSinceEpoch,
+      });
 
       if (weatherModel.windSpeed > 10.0) {
         generatedAlerts.add({
@@ -232,11 +253,12 @@ class WeatherRepositoryImpl {
     );
   }
 }
+
+// import 'dart:convert';
 // import '../../domain/entities/weather_entity.dart';
 // import '../../domain/entities/weather_alert.dart';
 // import '../datasources/remote_datasource.dart';
 // import '../datasources/local_datasource.dart';
-// import 'dart:convert';
 
 // class WeatherRepositoryImpl {
 //   final RemoteDatasource remote;
@@ -244,8 +266,19 @@ class WeatherRepositoryImpl {
 
 //   WeatherRepositoryImpl({required this.remote, required this.local});
 
+//   // --- SEARCH HISTORY METHODS ---
+//   Future<void> saveSearch(String query) async {
+//     await local.saveSearchHistory(query);
+//   }
+
+//   Future<List<String>> getSearchHistory() async {
+//     return local.getSearchHistory();
+//   }
+
+//   // --- WEATHER DATA METHODS ---
 //   Future<WeatherEntity> getCurrentWeatherByCity(String city) async {
 //     try {
+//       // 1. Fetch Remote Data
 //       final weatherModel = await remote.fetchCurrentByCity(city);
 //       final geo = await remote.geocodeCity(city);
 
@@ -256,12 +289,12 @@ class WeatherRepositoryImpl {
 
 //       final forecast = await remote.fetchOneCall(lat, lon);
 
-//       // --- 1. GENERATE ALERTS (Synthetic) ---
+//       // 2. Generate Synthetic Alerts (since free API lacks them)
 //       final List<Map<String, dynamic>> generatedAlerts = [];
 
 //       if (weatherModel.windSpeed > 10.0) {
 //         generatedAlerts.add({
-//           'sender_name': 'WeatherNow System',
+//           'sender_name': 'System',
 //           'event': 'High Wind Warning',
 //           'description':
 //               'Wind speeds are exceeding 10 m/s. Secure loose objects.',
@@ -274,7 +307,7 @@ class WeatherRepositoryImpl {
 
 //       if (weatherModel.description.toLowerCase().contains('rain')) {
 //         generatedAlerts.add({
-//           'sender_name': 'WeatherNow System',
+//           'sender_name': 'System',
 //           'event': 'Rain Alert',
 //           'description': 'Rain detected in $city. Drive carefully.',
 //           'start': DateTime.now().millisecondsSinceEpoch,
@@ -284,6 +317,7 @@ class WeatherRepositoryImpl {
 //         });
 //       }
 
+//       // 3. Create JSON Payload
 //       final payload = jsonEncode({
 //         'current': {
 //           'dt': weatherModel.dt,
@@ -300,11 +334,14 @@ class WeatherRepositoryImpl {
 //         'alerts': generatedAlerts,
 //       });
 
+//       // 4. Cache Data
 //       await local.cacheCity(city, lat, lon, country, state, payload);
 
+//       // 5. Check Favorite Status
 //       final cached = await local.getCachedCity(city);
 //       final isFav = (cached?['is_favorite'] as int? ?? 0) == 1;
 
+//       // 6. Map to Entity
 //       final alertEntities = generatedAlerts
 //           .map(
 //             (a) => WeatherAlert(
@@ -336,7 +373,7 @@ class WeatherRepositoryImpl {
 //         alerts: alertEntities,
 //       );
 //     } catch (e) {
-//       // Fallback
+//       // Fallback to Cache
 //       final cached = await local.getCachedCity(city);
 //       if (cached != null) {
 //         final data =
@@ -380,7 +417,6 @@ class WeatherRepositoryImpl {
 //     }
 //   }
 
-//   // --- THIS WAS MISSING ---
 //   Future<void> toggleFavorite(String city, bool isFavorite) async {
 //     await local.setFavorite(city, isFavorite);
 //   }
@@ -424,5 +460,31 @@ class WeatherRepositoryImpl {
 //         alerts: alertEntities,
 //       );
 //     }).toList();
+//   }
+
+//   Future<void> deleteAlert(String city, WeatherAlert alertToRemove) async {
+//     final cached = await local.getCachedCity(city);
+//     if (cached == null) return;
+
+//     final data = jsonDecode(cached['json'] as String) as Map<String, dynamic>;
+//     List<dynamic> alertsJson = (data['alerts'] as List?) ?? [];
+
+//     alertsJson.removeWhere(
+//       (a) =>
+//           a['event'] == alertToRemove.event &&
+//           a['description'] == alertToRemove.description,
+//     );
+
+//     data['alerts'] = alertsJson;
+//     final newPayload = jsonEncode(data);
+
+//     await local.cacheCity(
+//       city,
+//       (cached['lat'] as num).toDouble(),
+//       (cached['lon'] as num).toDouble(),
+//       cached['country'] as String? ?? '',
+//       cached['state'] as String? ?? '',
+//       newPayload,
+//     );
 //   }
 // }

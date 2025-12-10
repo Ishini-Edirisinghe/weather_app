@@ -4,7 +4,7 @@ import 'package:sqflite/sqflite.dart';
 class LocalDatasource {
   static const _dbName = 'weather_cache.db';
   static const _table = 'city_cache';
-  static const _historyTable = 'search_history'; // NEW TABLE
+  static const _historyTable = 'search_history';
 
   Database? _db;
 
@@ -15,13 +15,12 @@ class LocalDatasource {
 
     _db = await openDatabase(
       path,
-      version: 5, // INCREMENT VERSION
+      version: 5,
       onCreate: (db, v) async {
         await _createTable(db);
         await _createHistoryTable(db);
       },
       onUpgrade: (db, oldV, newV) async {
-        // Drop and recreate tables to ensure schema is correct
         await db.execute('DROP TABLE IF EXISTS $_table');
         await db.execute('DROP TABLE IF EXISTS $_historyTable');
         await _createTable(db);
@@ -47,7 +46,6 @@ class LocalDatasource {
     ''');
   }
 
-  // NEW: Create History Table
   Future<void> _createHistoryTable(Database db) async {
     await db.execute('''
       CREATE TABLE $_historyTable(
@@ -57,40 +55,49 @@ class LocalDatasource {
     ''');
   }
 
-  // NEW: Save search query
   Future<void> saveSearchHistory(String query) async {
     final db = await _openDb();
 
-    // 1. Insert or Update (moves to top if already exists)
+    // 1. Insert or Update
     await db.insert(_historyTable, {
       'query': query,
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
 
-    // 2. Keep only last 5 items (Delete older ones)
-    // This SQL deletes all rows NOT in the top 5 newest
+    // 2. Keep only last 7 items (Updated from 5)
     await db.execute('''
       DELETE FROM $_historyTable 
       WHERE query NOT IN (
         SELECT query FROM $_historyTable 
         ORDER BY timestamp DESC 
-        LIMIT 5
+        LIMIT 7
       )
     ''');
   }
 
-  // NEW: Get last 5 searches
   Future<List<String>> getSearchHistory() async {
     final db = await _openDb();
     final result = await db.query(
       _historyTable,
       orderBy: 'timestamp DESC',
-      limit: 5,
+      limit: 7, // Updated from 5
     );
     return result.map((row) => row['query'] as String).toList();
   }
 
-  // --- Existing Methods (Keep these) ---
+  // --- NEW: Clear All History ---
+  Future<void> clearSearchHistory() async {
+    final db = await _openDb();
+    await db.delete(_historyTable);
+  }
+
+  // --- NEW: Delete Single Item ---
+  Future<void> deleteSearchItem(String query) async {
+    final db = await _openDb();
+    await db.delete(_historyTable, where: 'query = ?', whereArgs: [query]);
+  }
+
+  // --- Existing Weather Methods ---
   Future<void> cacheCity(
     String city,
     double lat,
@@ -149,6 +156,8 @@ class LocalDatasource {
 // class LocalDatasource {
 //   static const _dbName = 'weather_cache.db';
 //   static const _table = 'city_cache';
+//   static const _historyTable = 'search_history'; // NEW TABLE
+
 //   Database? _db;
 
 //   Future<Database> _openDb() async {
@@ -158,14 +167,17 @@ class LocalDatasource {
 
 //     _db = await openDatabase(
 //       path,
-//       version: 4, // Increment version
+//       version: 5, // INCREMENT VERSION
 //       onCreate: (db, v) async {
 //         await _createTable(db);
+//         await _createHistoryTable(db);
 //       },
 //       onUpgrade: (db, oldV, newV) async {
-//         // Drop and recreate to ensure clean schema
+//         // Drop and recreate tables to ensure schema is correct
 //         await db.execute('DROP TABLE IF EXISTS $_table');
+//         await db.execute('DROP TABLE IF EXISTS $_historyTable');
 //         await _createTable(db);
+//         await _createHistoryTable(db);
 //       },
 //     );
 //     return _db!;
@@ -178,8 +190,8 @@ class LocalDatasource {
 //         city TEXT UNIQUE,
 //         lat REAL,
 //         lon REAL,
-//         country TEXT, -- New
-//         state TEXT,   -- New
+//         country TEXT,
+//         state TEXT,
 //         json TEXT,
 //         updated_at INTEGER,
 //         is_favorite INTEGER DEFAULT 0
@@ -187,6 +199,50 @@ class LocalDatasource {
 //     ''');
 //   }
 
+//   // NEW: Create History Table
+//   Future<void> _createHistoryTable(Database db) async {
+//     await db.execute('''
+//       CREATE TABLE $_historyTable(
+//         query TEXT PRIMARY KEY,
+//         timestamp INTEGER
+//       )
+//     ''');
+//   }
+
+//   // NEW: Save search query
+//   Future<void> saveSearchHistory(String query) async {
+//     final db = await _openDb();
+
+//     // 1. Insert or Update (moves to top if already exists)
+//     await db.insert(_historyTable, {
+//       'query': query,
+//       'timestamp': DateTime.now().millisecondsSinceEpoch,
+//     }, conflictAlgorithm: ConflictAlgorithm.replace);
+
+//     // 2. Keep only last 5 items (Delete older ones)
+//     // This SQL deletes all rows NOT in the top 5 newest
+//     await db.execute('''
+//       DELETE FROM $_historyTable 
+//       WHERE query NOT IN (
+//         SELECT query FROM $_historyTable 
+//         ORDER BY timestamp DESC 
+//         LIMIT 5
+//       )
+//     ''');
+//   }
+
+//   // NEW: Get last 5 searches
+//   Future<List<String>> getSearchHistory() async {
+//     final db = await _openDb();
+//     final result = await db.query(
+//       _historyTable,
+//       orderBy: 'timestamp DESC',
+//       limit: 5,
+//     );
+//     return result.map((row) => row['query'] as String).toList();
+//   }
+
+//   // --- Existing Methods (Keep these) ---
 //   Future<void> cacheCity(
 //     String city,
 //     double lat,
@@ -196,8 +252,6 @@ class LocalDatasource {
 //     String json,
 //   ) async {
 //     final db = await _openDb();
-
-//     // Preserve favorite status
 //     int isFav = 0;
 //     final existing = await db.query(
 //       _table,
@@ -205,10 +259,7 @@ class LocalDatasource {
 //       where: 'city = ?',
 //       whereArgs: [city],
 //     );
-
-//     if (existing.isNotEmpty) {
-//       isFav = existing.first['is_favorite'] as int? ?? 0;
-//     }
+//     if (existing.isNotEmpty) isFav = existing.first['is_favorite'] as int? ?? 0;
 
 //     await db.insert(_table, {
 //       'city': city,
